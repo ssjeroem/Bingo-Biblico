@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Bingo JW — Amor, unidad y espiritualidad</title>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<style>
+:root{--ink:#24313a;--muted:#667278;--line:#9aa5aa;--paper:#fff;--bg:#eef1f2;--accent:#d9ead3;--accent2:#fce8b2;--blue:#dceaf7;--danger:#f7d7d7}
+*{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--ink)}
+.wrap{max-width:1100px;margin:auto;padding:16px}.top{background:var(--paper);border-radius:18px;padding:20px;box-shadow:0 3px 15px #0001;text-align:center}h1{margin:0 0 6px;font-size:clamp(24px,4vw,38px)}.sub{margin:0;color:var(--muted)}
+.panel{background:#fff;border-radius:18px;padding:18px;margin-top:16px;box-shadow:0 3px 15px #0001}.center{text-align:center}.hidden{display:none!important}
+.mode-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;max-width:720px;margin:20px auto 0}.mode{border:2px solid #cbd2d5;background:#fff;border-radius:16px;padding:22px;text-align:center;cursor:pointer}.mode:hover{border-color:#78858b}.mode b{display:block;font-size:20px;margin-bottom:6px}.mode span{color:var(--muted)}
+button,select,input{font:inherit;padding:11px 14px;border-radius:10px;border:1px solid #aab2b5;background:#fff;color:var(--ink)}button{cursor:pointer}button.primary{background:var(--ink);color:#fff;border-color:var(--ink)}button:disabled{opacity:.45;cursor:not-allowed}.controls{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;align-items:center}.controls label{display:flex;align-items:center;gap:7px}
+.room{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;align-items:center}.room-code{font-size:clamp(26px,7vw,46px);font-weight:800;letter-spacing:5px;background:#f4f6f7;padding:10px 18px;border-radius:14px}.small{font-size:14px;color:var(--muted)}.status{text-align:center;color:var(--muted);margin:12px 0}.notice{padding:12px 14px;border-radius:12px;background:#f4f6f7;text-align:center}.notice.ok{background:var(--accent)}.notice.warn{background:var(--accent2)}.notice.err{background:var(--danger)}
+.draw{display:flex;align-items:center;justify-content:center;min-height:105px;text-align:center;font-size:clamp(25px,5vw,44px);font-weight:700;margin:8px 0 16px;background:#f7f8f8;border-radius:14px}.grid{display:grid;grid-template-columns:repeat(4,1fr);border:3px solid var(--ink);background:#fff}.cell{min-height:120px;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;text-align:center;padding:14px;font-weight:700;font-size:clamp(14px,2vw,19px);position:relative;cursor:pointer;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;touch-action:manipulation}.cell:active{transform:scale(.985)}.cell.marked{background:var(--accent)}.cell.marked:after{content:"✓";position:absolute;right:8px;top:5px;font-size:22px}.cell.winner{background:var(--accent2)}.cell:not(.available){cursor:default;opacity:.62}.cell.available{cursor:pointer}
+.info{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px}.box{background:#fff;border-radius:14px;padding:15px;box-shadow:0 2px 10px #0001}.box h3{margin-top:0}.called{display:flex;flex-wrap:wrap;gap:6px}.tag{padding:5px 8px;background:#edf0f1;border-radius:999px;font-size:13px}.footer{text-align:center;margin:18px 0;color:#68747a;font-size:14px}
+.player-list{display:flex;flex-wrap:wrap;gap:7px;justify-content:center}.pill{background:#edf0f1;border-radius:999px;padding:6px 10px;font-size:13px}
+@media(max-width:650px){.wrap{padding:10px}.mode-grid{grid-template-columns:1fr}.cell{min-height:82px;padding:7px;font-size:12px}.info{grid-template-columns:1fr}.grid{border-width:2px}.room-code{letter-spacing:3px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="top">
+<h1>Bingo sobre cualidades Cristianas en el matrimonio JW</h1>
+<p class="sub">Amor, unidad y espiritualidad · bingo multijugador</p>
+</header>
+
+<section id="start" class="panel center">
+<h2>¿Cómo vas a participar?</h2>
+<p class="small">El organizador controla las palabras. Cada jugador marca su propio cartón desde su móvil.</p>
+<div class="mode-grid">
+<button class="mode" id="hostMode" type="button"><b>👑 Soy el organizador</b><span>Crear una sala y sacar las palabras</span></button>
+<button class="mode" id="playerMode" type="button"><b>📱 Soy jugador</b><span>Entrar con el código de la sala</span></button>
+</div>
+</section>
+
+<section id="join" class="panel center hidden">
+<h2>Entrar en una sala</h2>
+<p class="small">Escribe el código de 6 caracteres que te dé el organizador.</p>
+<div class="room">
+<input id="roomInput" maxlength="6" inputmode="text" autocomplete="off" placeholder="ABC123" aria-label="Código de sala">
+<button class="primary" id="joinBtn" type="button">Entrar</button>
+<button id="backFromJoin" type="button">Atrás</button>
+</div>
+<div id="joinMsg" class="notice hidden" style="margin-top:12px"></div>
+</section>
+
+<section id="game" class="hidden">
+<section class="panel center">
+<div id="hostRoom" class="hidden">
+<h2>Sala del organizador</h2>
+<div class="room-code" id="roomCode">------</div>
+<p class="small">Comparte este código con todos los jugadores.</p>
+<div class="controls"><button id="shareBtn" type="button">↗ Compartir sala</button><button id="copyBtn" type="button">Copiar código</button></div>
+<div class="status" id="playerCount">0 jugadores conectados</div>
+<div class="player-list" id="playerList"></div>
+</div>
+<div id="playerRoom" class="hidden">
+<h2>Estás dentro de la sala</h2>
+<div class="notice ok">🟢 Conectado al organizador</div>
+<p class="small" id="playerRoomCode"></p>
+</div>
+</section>
+
+<section class="panel">
+<div class="controls">
+<label>Cartón:
+<select id="cardSelect"></select></label>
+<button class="primary" id="drawBtn" type="button">🎲 Sacar palabra</button>
+<button id="resetBtn" type="button">↺ Reiniciar mi cartón</button>
+<button id="leaveBtn" type="button">Salir de la sala</button>
+</div>
+<div class="draw" id="draw">Esperando al organizador…</div>
+<div class="status" id="status">0 casillas marcadas</div>
+<div class="grid" id="grid"></div>
+<div id="playerHint" class="notice" style="margin-top:14px">👆 Escucha la palabra y toca esa casilla en tu móvil. Puedes volver a tocarla para desmarcarla.</div>
+</section>
+
+<div class="info">
+<div class="box"><h3>Palabras anunciadas</h3><div class="called" id="called"></div></div>
+<div class="box" id="howBox"><h3>Cómo jugar</h3><p>El organizador pulsa «Sacar palabra» y la palabra aparece automáticamente en todos los móviles conectados.</p><p>Cada jugador marca <b>manualmente</b> su casilla. Las marcas no se comparten entre jugadores.</p></div>
+</div>
+</section>
+
+<div class="footer">♥ «Una cuerda triple no se puede romper fácilmente» ♥</div>
+</div>
+<script src="cards.js"></script>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const start=$('start'), join=$('join'), game=$('game'), hostRoom=$('hostRoom'), playerRoom=$('playerRoom');
+  const roomInput=$('roomInput'), joinMsg=$('joinMsg'), roomCodeEl=$('roomCode'), playerRoomCode=$('playerRoomCode');
+  const cardSelect=$('cardSelect'), drawBtn=$('drawBtn'), resetBtn=$('resetBtn'), leaveBtn=$('leaveBtn');
+  const draw=$('draw'), status=$('status'), calledEl=$('called'), grid=$('grid');
+  let role=null, peer=null, conn=null, roomCode=null, called=[], currentCard=localStorage.getItem('bingoCard')||Object.keys(CARDS)[0];
+  let marks=JSON.parse(localStorage.getItem('bingoMarks')||'{}');
+  let peerConnections=new Map(), initialized=false;
+
+  Object.entries(CARDS).forEach(([id,c])=>{const o=document.createElement('option');o.value=id;o.textContent=c.title;cardSelect.appendChild(o)});
+  cardSelect.value=currentCard;
+
+  function normalizeCode(v){return String(v||'').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,6)}
+  function randomCode(){const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let s='';for(let i=0;i<6;i++)s+=chars[Math.floor(Math.random()*chars.length)];return s}
+  function roomPeerId(code){return 'bingo-jw-'+code.toLowerCase()}
+  function storageKey(){return 'bingoMarks_'+currentCard}
+  function currentMarks(){if(!Array.isArray(marks[currentCard]))marks[currentCard]=[];return marks[currentCard]}
+  function saveMarks(){localStorage.setItem('bingoCard',currentCard);localStorage.setItem('bingoMarks',JSON.stringify(marks))}
+  function availableWords(){const all=[...new Set(Object.values(CARDS).flatMap(c=>c.cells))];return all.filter(w=>!called.includes(w))}
+
+  function showMsg(el,msg,type=''){el.textContent=msg;el.className='notice'+(type?' '+type:'')+(msg?'':' hidden')}
+  function setRole(r){role=r;start.classList.add('hidden');game.classList.add('hidden');join.classList.toggle('hidden',r!=='player');if(r==='host')startHost()}
+
+  function startHost(){
+    game.classList.remove('hidden');hostRoom.classList.remove('hidden');playerRoom.classList.add('hidden');drawBtn.disabled=false;
+    roomCode=randomCode();roomCodeEl.textContent=roomCode;
+    called=[];draw.textContent='Esperando a que se conecten los jugadores…';render();
+    peer=new Peer(roomPeerId(roomCode),{debug:0});
+    peer.on('open',()=>{roomCodeEl.textContent=roomCode;updatePlayerList()});
+    peer.on('connection',c=>{peerConnections.set(c.peer,c);setupHostConnection(c);updatePlayerList()});
+    peer.on('error',e=>{console.error(e);showHostError('No se pudo crear la sala. Pulsa «Salir de la sala» y vuelve a intentarlo.')});
+    peer.on('disconnected',()=>showHostError('Se perdió la conexión con el servidor. Comprueba Internet.'));
+  }
+  function showHostError(msg){const n=document.createElement('div');n.className='notice err';n.textContent=msg;hostRoom.appendChild(n)}
+  function setupHostConnection(c){
+    c.on('open',()=>{sendState(c);updatePlayerList()});
+    c.on('close',()=>{peerConnections.delete(c.peer);updatePlayerList()});
+    c.on('error',()=>{peerConnections.delete(c.peer);updatePlayerList()});
+    c.on('data',data=>{
+      if(data?.type==='hello'){sendState(c)}
+      if(data?.type==='ping'){try{c.send({type:'pong'})}catch(e){}}
+    });
+  }
+  function sendState(c){try{c.send({type:'state',called,draw:called[called.length-1]||'',roomCode})}catch(e){}}
+  function broadcast(msg){for(const c of peerConnections.values()){if(c.open){try{c.send(msg)}catch(e){}}}}
+  function updatePlayerList(){const count=peerConnections.size;$('playerCount').textContent=`${count} jugador${count===1?'':'es'} conectado${count===1?'':'s'}`;$('playerList').innerHTML='';let n=1;for(const c of peerConnections.values()){const s=document.createElement('span');s.className='pill';s.textContent='📱 Jugador '+n++;$('playerList').appendChild(s)}}
+
+  function connectPlayer(code){
+    roomCode=normalizeCode(code);if(roomCode.length!==6){showMsg(joinMsg,'El código debe tener 6 caracteres.','warn');return}
+    showMsg(joinMsg,'Conectando…');
+    peer=new Peer();
+    peer.on('open',()=>{
+      conn=peer.connect(roomPeerId(roomCode),{reliable:true});
+      conn.on('open',()=>{conn.send({type:'hello'});join.classList.add('hidden');game.classList.remove('hidden');playerRoom.classList.remove('hidden');hostRoom.classList.add('hidden');playerRoomCode.textContent='Sala: '+roomCode;draw.textContent='Esperando al organizador…';render();showMsg(joinMsg,'')});
+      conn.on('data',handlePlayerData);
+      conn.on('close',()=>{showPlayerConnectionLost()});
+      conn.on('error',()=>showPlayerConnectionLost());
+    });
+    peer.on('error',e=>{console.error(e);showMsg(joinMsg,'No se pudo encontrar la sala. Comprueba el código y que el organizador siga conectado.','err');try{peer.destroy()}catch(x){}});
+  }
+  function handlePlayerData(data){
+    if(data?.type==='state'){called=Array.isArray(data.called)?data.called:[];draw.textContent=data.draw||'Esperando al organizador…';render()}
+    if(data?.type==='draw'){called=Array.isArray(data.called)?data.called:called;if(data.word)draw.textContent=data.word;render()}
+    if(data?.type==='reset'){called=[];draw.textContent='Esperando al organizador…';marks={};saveMarks();render()}
+  }
+  function showPlayerConnectionLost(){const n=document.createElement('div');n.className='notice err';n.textContent='🔴 Se perdió la conexión con el organizador. No cierres esta página; vuelve a intentarlo cuando la sala esté activa.';playerRoom.appendChild(n)}
+
+  function render(){
+    grid.innerHTML='';const mine=currentMarks();
+    CARDS[currentCard].cells.forEach((word,i)=>{
+      const d=document.createElement('div');d.className='cell';d.textContent=word;
+      const isCalled=called.includes(word);if(isCalled)d.classList.add('available');
+      if(mine.includes(i))d.classList.add('marked');
+      d.addEventListener('click',()=>toggleMark(i,word));grid.appendChild(d);
+    });
+    calledEl.innerHTML='';[...called].reverse().forEach(w=>{const s=document.createElement('span');s.className='tag';s.textContent=w;calledEl.appendChild(s)});
+    const count=mine.length;status.textContent=`${count} casilla${count===1?'':'s'} marcada${count===1?'':'s'}`;checkBingo();
+    drawBtn.style.display=role==='host'?'':'none';resetBtn.style.display='';
+  }
+  function toggleMark(index,word){
+    if(role==='player' && !called.includes(word))return;
+    const mine=currentMarks(),pos=mine.indexOf(index);if(pos===-1)mine.push(index);else mine.splice(pos,1);saveMarks();render();
+  }
+  function drawWord(){if(role!=='host')return;const a=availableWords();if(!a.length){draw.textContent='🎉 Ya se han anunciado todas las palabras';return}const word=a[Math.floor(Math.random()*a.length)];called.push(word);draw.textContent=word;broadcast({type:'draw',word,called});render()}
+  function checkBingo(){
+    const mine=currentMarks();const marked=CARDS[currentCard].cells.map((_,i)=>mine.includes(i));
+    const lines=[[0,1,2,3],[4,5,6,7],[8,9,10,11],[12,13,14,15],[0,4,8,12],[1,5,9,13],[2,6,10,14],[3,7,11,15],[0,5,10,15],[3,6,9,12]];
+    const win=lines.some(line=>line.every(i=>marked[i]));[...grid.children].forEach((el,i)=>el.classList.toggle('winner',win&&marked[i]));
+    if(win)status.textContent+= ' · 🎉 ¡BINGO!';
+  }
+  function resetMine(){marks[currentCard]=[];saveMarks();render()}
+  function leave(){try{if(conn)conn.close();if(peer)peer.destroy()}catch(e){}peer=null;conn=null;peerConnections.clear();role=null;roomCode=null;called=[];game.classList.add('hidden');join.classList.add('hidden');start.classList.remove('hidden');hostRoom.classList.add('hidden');playerRoom.classList.add('hidden')}
+
+  $('hostMode').onclick=()=>setRole('host');
+  $('playerMode').onclick=()=>{start.classList.add('hidden');join.classList.remove('hidden');roomInput.focus();};
+  $('backFromJoin').onclick=()=>{join.classList.add('hidden');start.classList.remove('hidden')};
+  $('joinBtn').onclick=()=>connectPlayer(roomInput.value);
+  roomInput.addEventListener('input',()=>{roomInput.value=normalizeCode(roomInput.value)});
+  roomInput.addEventListener('keydown',e=>{if(e.key==='Enter')connectPlayer(roomInput.value)});
+  $('shareBtn').onclick=async()=>{const text=`Únete a mi bingo JW. Código de sala: ${roomCode}`;const url=location.href.split('?')[0]+'?sala='+roomCode;if(navigator.share){try{await navigator.share({title:'Bingo JW',text,url})}catch(e){}}else{try{await navigator.clipboard.writeText(text+' '+url);alert('Texto copiado para compartir.')}catch(e){alert(text+'\n'+url)}}};
+  $('copyBtn').onclick=async()=>{try{await navigator.clipboard.writeText(roomCode);alert('Código copiado: '+roomCode)}catch(e){alert('Código de sala: '+roomCode)}};
+  drawBtn.onclick=drawWord;resetBtn.onclick=resetMine;leaveBtn.onclick=leave;cardSelect.onchange=()=>{currentCard=cardSelect.value;saveMarks();render()};
+
+  const urlCode=new URLSearchParams(location.search).get('sala');
+  if(urlCode){start.classList.add('hidden');join.classList.remove('hidden');roomInput.value=normalizeCode(urlCode);}
+  render();
+})();
+</script>
+</body>
+</html>
