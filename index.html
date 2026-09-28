@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="es"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#17324d"><title>BINGO BÍBLICO</title>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script><script src="cards_NUEVO.js"></script>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f4f1e8;color:#17202a}
+header{background:#17324d;color:#fff;text-align:center;padding:18px 12px 14px}h1{margin:0;font-size:clamp(25px,7vw,38px)}.subtitle{opacity:.9}
+main{max-width:920px;margin:auto;padding:12px}.panel{background:#fff;border-radius:18px;padding:16px;margin:12px 0;box-shadow:0 3px 12px #0001}
+button,input{font:inherit}button{border:0;border-radius:12px;padding:12px 15px;font-weight:700;cursor:pointer;touch-action:manipulation}.primary{background:#17324d;color:#fff}.secondary{background:#e7edf2;color:#17324d}
+input{width:100%;padding:12px;border:1px solid #c7cdd3;border-radius:12px}.row{display:flex;gap:8px;flex-wrap:wrap}.row>*{flex:1 1 150px}.hidden{display:none!important}
+.code{font-size:30px;letter-spacing:5px;font-weight:800;text-align:center}.notice{padding:10px;border-radius:12px;background:#eef4f8}.good{background:#e7f4e9}.bad{background:#f9e8e8}
+.drawn{font-size:26px;font-weight:800;text-align:center;min-height:38px;margin:8px}.words{display:flex;gap:6px;flex-wrap:wrap;max-height:180px;overflow:auto}.wordpill{padding:6px 9px;border-radius:999px;background:#e7edf2;font-size:13px}
+.players{display:grid;gap:8px;margin-top:10px}.playerrow{display:flex;gap:8px;align-items:center;justify-content:space-between;border:1px solid #d6dce1;border-radius:12px;padding:10px}.playername{font-weight:700}
+.board{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-top:12px}.cell{min-height:72px;background:#fff;border:2px solid #d3d9de;border-radius:10px;padding:5px 3px;font-size:clamp(11px,2.8vw,16px);font-weight:700;display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.08;user-select:none;-webkit-user-select:none}
+.cell.called{border-color:#17324d;background:#dfeaf3}.cell.marked{background:#17324d;color:#fff;border-color:#17324d}.cell.not-called{opacity:.58}.cell.free{font-size:27px;background:#fff4bf;border-color:#d2ae37}.cell.free.marked{background:#d2ae37;color:#fff}
+@media(max-width:560px){main{padding:9px}.panel{padding:12px}.cell{min-height:58px}}
+</style></head><body>
+<header><h1>📖 BINGO BÍBLICO</h1><div class="subtitle">Juego bíblico JW</div></header><main>
+<section id="home" class="panel"><h2>Crear o unirse a una sala</h2>
+<button class="primary" id="createBtn" style="width:100%">Crear sala como organizador</button><hr>
+<label>Código de sala</label><div class="row"><input id="roomInput" maxlength="6" placeholder="Ej. ABC123" autocapitalize="characters"><button class="secondary" id="joinBtn">Unirme</button></div>
+<p class="notice">El organizador te asignará un cartón. Tú no eliges el cartón.</p></section>
+
+<section id="host" class="panel hidden"><h2>🎯 Organizador</h2><div>Comparte este código:</div><div class="code" id="roomCode"></div>
+<div class="row"><button class="secondary" id="copyBtn">Copiar código</button><button class="secondary" id="shareBtn">Compartir</button></div>
+<div class="notice" style="margin-top:10px"><b>Jugadores:</b> <span id="playerCount">0</span><br>Selecciona un jugador y asígnale un cartón.</div>
+<div id="players" class="players"></div><div class="row" style="margin-top:10px"><button class="secondary" id="autoAssignBtn">🎲 Asignar automáticamente</button></div>
+<hr><div class="drawn" id="lastDraw">Listo para sacar una palabra</div><button class="primary" id="drawBtn" style="width:100%;font-size:18px">📖 SACAR PALABRA</button><div id="calledWords" class="words" style="margin-top:10px"></div></section>
+
+<section id="player" class="panel hidden"><h2 id="playerTitle">Mi cartón</h2><div id="assignStatus" class="notice">Conectando…</div><div id="board" class="board"></div>
+<p class="notice">Toca una palabra <b>después de que el organizador la saque</b>. Tus marcas son solo tuyas.</p><div id="bingoMsg" class="notice hidden"></div></section>
+</main>
+<script>
+const S={peer:null,host:false,code:null,connections:new Map(),assigned:new Map(),called:[],card:null,marks:new Set(),won:false};
+const $=x=>document.getElementById(x),show=x=>$(x).classList.remove("hidden"),hide=x=>$(x).classList.add("hidden");
+function st(m,c="notice"){let e=$("assignStatus");e.textContent=m;e.className=c}
+function rid(c){return"bingo-biblico-"+c.toUpperCase()}
+function code(){let x="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",s="";for(let i=0;i<6;i++)s+=x[Math.floor(Math.random()*x.length)];return s}
+function esc(s){return s.replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
+function used(){return[...S.assigned.values()].map(x=>x.cardNo).filter(Boolean)}
+function avail(){let u=new Set(used());return Array.from({length:25},(_,i)=>i+1).filter(n=>!u.has(n))}
+function hostPlayers(){ $("playerCount").textContent=S.connections.size;let b=$("players");b.innerHTML="";
+ if(!S.connections.size){b.innerHTML='<div class="notice">Esperando jugadores…</div>';return}
+ for(let [p,c] of S.connections){let i=S.assigned.get(p)||{},r=document.createElement("div");r.className="playerrow";
+ r.innerHTML='<div><div class="playername">'+esc(i.name||"Jugador")+'</div><div>'+(i.cardNo?"Cartón "+i.cardNo:"Sin cartón")+'</div></div>';
+ let q=document.createElement("button");q.className=i.cardNo?"secondary":"primary";q.textContent=i.cardNo?"Cambiar":"Asignar";q.onclick=()=>assign(p);r.appendChild(q);b.appendChild(r)}
+}
+function assign(p){let c=S.connections.get(p);if(!c)return;let a=avail();let old=S.assigned.get(p)?.cardNo;if(old)a=a.filter(n=>n!==old);if(!a.length){alert("No quedan cartones libres.");return}
+ let n=a[Math.floor(Math.random()*a.length)];S.assigned.set(p,{name:S.assigned.get(p)?.name||"Jugador",cardNo:n});c.send({type:"assignment",cardNo:n,called:S.called});hostPlayers()}
+function broadcast(m){for(let c of S.connections.values())if(c.open)try{c.send(m)}catch(e){}}
+function renderCalled(){$("calledWords").innerHTML=S.called.map(w=>'<span class="wordpill">'+esc(w)+"</span>").join("")}
+function renderBoard(){if(!S.card)return;$("board").innerHTML="";S.card.cells.flat().forEach((w,i)=>{let b=document.createElement("button");b.className="cell";b.textContent=w;
+ if(w==="💎")b.className+=" free marked";else{b.className+=S.called.includes(w)?" called":" not-called";if(S.marks.has(i))b.className+=" marked";b.onclick=()=>mark(i)}$("board").appendChild(b)});bingo()}
+function mark(i){let w=S.card.cells.flat()[i];if(!S.called.includes(w)){st("Esa palabra todavía no ha salido.");return}S.marks.has(i)?S.marks.delete(i):S.marks.add(i);renderBoard()}
+function bingo(){let m=new Set([...S.marks,12]),l=[];for(let r=0;r<5;r++)l.push([0,1,2,3,4].map(c=>r*5+c));for(let c=0;c<5;c++)l.push([0,1,2,3,4].map(r=>r*5+c));l.push([0,6,12,18,24],[4,8,12,16,20]);if(l.some(a=>a.every(i=>m.has(i)))&&!S.won){S.won=true;show("bingoMsg");$("bingoMsg").textContent="🎉 ¡BINGO! Avisa al organizador."}}
+function card(n){S.card=CARDS[String(n)];S.marks=new Set();S.won=false;$("playerTitle").textContent=S.card.title;st("Cartón asignado por el organizador.","notice good");renderBoard()}
+
+$("createBtn").onclick=()=>{S.host=true;S.code=code();$("createBtn").disabled=true;S.peer=new Peer(rid(S.code),{debug:0,config:{iceServers:[{urls:"stun:stun.l.google.com:19302"},{urls:"stun:stun1.l.google.com:19302"}]}});
+S.peer.on("open",()=>{$("roomCode").textContent=S.code;hide("home");show("host");hostPlayers()});S.peer.on("connection",c=>{S.connections.set(c.peer,c);S.assigned.set(c.peer,{name:"Jugador",cardNo:null});c.on("open",()=>c.send({type:"welcome"}));c.on("data",m=>{if(m.type==="hello"){let x=S.assigned.get(c.peer)||{};x.name=m.name||"Jugador";S.assigned.set(c.peer,x);hostPlayers()}});let rm=()=>{S.connections.delete(c.peer);S.assigned.delete(c.peer);hostPlayers()};c.on("close",rm);c.on("error",rm);hostPlayers()});S.peer.on("error",()=>{alert("No se pudo crear la sala.");$("createBtn").disabled=false})}
+
+$("joinBtn").onclick=()=>{let co=$("roomInput").value.trim().toUpperCase();if(!/^[A-Z0-9]{6}$/.test(co)){alert("Código de 6 caracteres.");return}S.code=co;hide("home");show("player");st("Conectando con el organizador…");
+S.peer=new Peer({debug:0,config:{iceServers:[{urls:"stun:stun.l.google.com:19302"},{urls:"stun:stun1.l.google.com:19302"}]}});S.peer.on("open",()=>{let c=S.peer.connect(rid(co),{reliable:true});S.hostConn=c;c.on("open",()=>{st("Conectado. Esperando que el organizador te asigne un cartón…");c.send({type:"hello",name:"Jugador "+S.peer.id.slice(-4)})});c.on("data",m=>{if(m.type==="assignment"){S.called=m.called||[];card(m.cardNo)}if(m.type==="draw"){S.called=m.called||[];renderBoard()}});c.on("close",()=>st("El organizador cerró la sala.","notice bad"));c.on("error",()=>st("Se perdió la conexión.","notice bad"))});S.peer.on("error",()=>st("No se pudo conectar. Comprueba el código.","notice bad"))}
+
+$("drawBtn").onclick=()=>{let a=WORDS.filter(w=>!S.called.includes(w));if(!a.length){$("lastDraw").textContent="Ya salieron las 75 palabras.";return}let w=a[Math.floor(Math.random()*a.length)];S.called.push(w);$("lastDraw").textContent="📖 "+w;renderCalled();broadcast({type:"draw",called:S.called})};
+$("autoAssignBtn").onclick=()=>{for(let [p,i] of S.assigned)if(!i.cardNo){assign(p);return}alert("Todos los jugadores tienen cartón.")};
+$("copyBtn").onclick=async()=>{try{await navigator.clipboard.writeText(S.code);alert("Código copiado: "+S.code)}catch(e){alert("Código: "+S.code)}};
+$("shareBtn").onclick=async()=>{let u=location.origin+location.pathname+"?sala="+S.code;if(navigator.share){try{await navigator.share({title:"BINGO BÍBLICO",text:"Únete a mi sala. Código: "+S.code,url:u})}catch(e){}}else try{await navigator.clipboard.writeText(u);alert("Enlace copiado.")}catch(e){alert(u)}};
+let q=new URLSearchParams(location.search);if(q.get("sala"))$("roomInput").value=q.get("sala").toUpperCase();
+</script></body></html>
